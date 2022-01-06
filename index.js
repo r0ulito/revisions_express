@@ -1,7 +1,12 @@
 import express from "express";
-import usersJson from "./databases/users.json";
+const fs = require("fs");
+const userJsonPath = "./databases/users.json";
+const userJsonRawData = fs.readFileSync(userJsonPath);
+let usersJson = JSON.parse(userJsonRawData);
+
+
 const bodyParser = require("body-parser");
-const fs = require('fs');
+
 const app = express();
 
 app.use(bodyParser());
@@ -15,6 +20,7 @@ app.get("/", (req, res) => {
 });
 
 app.get("/users", (req, res) => {
+
   res.json(usersJson);
 });
 
@@ -30,11 +36,19 @@ app.get("/users/:id", (req, res) => {
 app.get("/user/add", (req, res) => {
   res.render("partials/useradd");
 });
+app.get("/user/edit/:id", (req, res) => {
+  const { id } = req.params;
+  const user = usersJson.filter((user) => user.id == id)[0];
+  console.log(user);
+  res.render("partials/useredit", {
+    user: user,
+  });
+});
 
 app.post("/users", (req, res) => {
   let { name, username, email } = req.body;
   const user = {
-    id : usersJson.length + 1,
+    id: usersJson.length + 1,
     name,
     username,
     email,
@@ -56,17 +70,32 @@ app.post("/users", (req, res) => {
       bs: "harness real-time e-markets",
     },
   };
-
-  console.log(user);
   usersJson.push(user);
-  fs.writeFileSync('./databases/users.json', JSON.stringify(usersJson, null, 4));
-
+  fs.writeFileSync(
+    userJsonPath,
+    JSON.stringify(usersJson, null, 4)
+  );
 
   res.redirect("/");
 });
 
-app.get("/time", (req, res) => {
-  const date = new Date();
+app.post("/users/:id", (req, res, next) => {
+  let { name, username, email } = req.body;
+  usersJson = usersJson.map((user) => {
+    if (user.id == req.params.id) {
+      return {
+        ...user,
+        name,
+        username,
+        email,
+      };
+    } else {
+      return user;
+    }
+  });
+
+  fs.writeFileSync(userJsonPath, JSON.stringify(usersJson, null, 4));
+  res.redirect('/users')
 });
 
 app.listen(PORT, () => {
